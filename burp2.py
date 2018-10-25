@@ -1,16 +1,19 @@
 #!/usr/bin/python3
 import requests
 import json
+from pprint import pprint
 
 def testAPIConnection(url, key):
     """Attempts to connect to the Burp API with a URL that includes the API key."""
     try:
-        resp = requests.get(url + key, verify=False)
+        resp = requests.get(url + "/" + key, verify=False)
         print(resp)
         print(resp.status_code)
         print(type(resp.status_code))
+        print(resp.content)
+        print(resp.json)
         if resp.status_code == 200:
-            return 1
+            return True
         else:
             print('Invalid API URL or Key. Server Response: {}'.format(resp.status_code))
             return 2
@@ -26,9 +29,9 @@ def startBurpScan(url, key, target, scope, creds):
     out of the scope of the url being scanned.
     """
     # Tests connection to the API. Exits the function if unsuccessful.
-    if not burp2.testAPIConnection(url, key):
+    if not testAPIConnection(url, key):
         return False
-    api_scan_url = url + key + '/scan'
+    api_scan_url = url + "/" + key + '/v0.1/scan/'
 
     # Automatically sets the scope to the URL. This prevents the scanner
     # to scan out of the scope of the URL you are providing.
@@ -38,9 +41,10 @@ def startBurpScan(url, key, target, scope, creds):
         "application_logins": []
     }
     for item in scope:
-        data["scope"]["include"] += {"rule": item, "type": "SimpleScopeDef"}
-    for cred in creds:
-        data["application_logins"] += {"password": cred[1], "username": cred[0]}
+        data["scope"]["include"].append({"rule": item, "type": "SimpleScopeDef"})
+    if creds:
+        for cred in creds:
+            data["application_logins"] += {"password": cred[1], "username": cred[0]}
     try:
         resp = requests.post(api_scan_url, json=data)
     except Exception as e:
@@ -52,40 +56,33 @@ def startBurpScan(url, key, target, scope, creds):
         return False
 
 def checkBurpScan(url, key, scanID):
-    if not burp2.testAPIConnection(url, key):
+    if not testAPIConnection(url, key):
         print("api returned false")
-        #return False
-    api_scan_url = url + key + '/v0.1/scan/' + scanID
+        return False
+    api_scan_url = url + "/" + key + '/v0.1/scan/' + scanID
     resp = requests.get(api_scan_url)
-    print(resp)
-    print(resp.status_code)
     if resp.status_code is not 200:
         return False
-    print(resp.json())
     return resp.json()
 
 def issueDefinitions(url, key):
-    if not burp2.testAPIConnection(url, key):
+    if not testAPIConnection(url, key):
         print("api returned false")
         return False
-    api_scan_url = url + key + "/v0.1/knowledge_base/issue_definitions"
+    api_scan_url = url + "/" + key + "/v0.1/knowledge_base/issue_definitions"
     resp = requests.get(api_scan_url)
-    print(resp)
-    print(resp.status_code)
     if resp.status_code is not 200:
         return False
-    print(resp.json())
     return resp.json()
 
 def defineIssues(scanIssues, definitions):
     retIssues = []
-    definitions = dict([(D["issue_type_id"], burp2.pop(D, "issue_type_id")) for D in definitions])
+    definitions = dict([(D["issue_type_id"], pop(D, "issue_type_id")) for D in definitions])
     # Definitions is now a dict of issue_type_id: issue_data.
     for issue in scanIssues["issue_events"]:
         ret = issue
         number = str(issue["issue"]["type_index"])
         if number in definitions.keys():
-            print("found")
             if "description" in definitions[number].keys():
                 ret["issue"]["issue_description"] = definitions[number]["description"]
             if "remediation" in definitions[number].keys():
@@ -106,8 +103,8 @@ def pop(x, k):
     return x
 
 def getIssues(url, key, scanID):
-    scanIssues = burp2.checkBurpScan(url, key, scanID)
-    definitions = burp2.issueDefinitions(url, key)
+    scanIssues = checkBurpScan(url, key, scanID)
+    definitions = issueDefinitions(url, key)
     issues = defineIssues(scanIssues, definitions)
     return issues
 
