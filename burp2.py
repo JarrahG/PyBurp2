@@ -1,17 +1,13 @@
 #!/usr/bin/python3
-import requests
+import copy
 import json
+import requests
 from pprint import pprint
 
 def testAPIConnection(url, key):
     """Attempts to connect to the Burp API with a URL that includes the API key."""
     try:
         resp = requests.get(url + "/" + key, verify=False)
-        print(resp)
-        print(resp.status_code)
-        print(type(resp.status_code))
-        print(resp.content)
-        print(resp.json)
         if resp.status_code == 200:
             return True
         else:
@@ -20,7 +16,6 @@ def testAPIConnection(url, key):
     except Exception as e:
         print(e)
         print("exception")
-    print("final return")
     return 3
 
 def startBurpScan(url, key, target, scope, creds):
@@ -28,9 +23,11 @@ def startBurpScan(url, key, target, scope, creds):
     target URL. Scope is limited to the URL by default to prevent going
     out of the scope of the url being scanned.
     """
+    print("starting scan")
     # Tests connection to the API. Exits the function if unsuccessful.
     if not testAPIConnection(url, key):
         return False
+    print("API CONNECTION SUCCESS")
     api_scan_url = url + "/" + key + '/v0.1/scan/'
 
     # Automatically sets the scope to the URL. This prevents the scanner
@@ -44,7 +41,7 @@ def startBurpScan(url, key, target, scope, creds):
         data["scope"]["include"].append({"rule": item, "type": "SimpleScopeDef"})
     if creds:
         for cred in creds:
-            data["application_logins"] += {"password": cred[1], "username": cred[0]}
+            data["application_logins"].append({"password": cred[1], "username": cred[0]})
     try:
         resp = requests.post(api_scan_url, json=data)
     except Exception as e:
@@ -94,6 +91,7 @@ def defineIssues(scanIssues, definitions):
         else:
             print("not found " + number)
             continue
+        retIssues.append(ret)
     return retIssues
 
 def pop(x, k):
