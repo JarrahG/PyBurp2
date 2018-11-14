@@ -53,7 +53,7 @@ def startBurpScan(url, key, target, scope, creds):
 def checkBurpScan(url, key, scanID):
     if not testAPIConnection(url, key):
         print("api returned false")
-        #return False
+        return False
     api_scan_url = url + "/" + key + '/v0.1/scan/' + scanID
     resp = requests.get(api_scan_url)
     if resp.status_code is not 200:
