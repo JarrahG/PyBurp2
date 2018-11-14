@@ -1,23 +1,21 @@
 #!/usr/bin/python3
-import requests
+import copy
 import json
+import requests
+from pprint import pprint
 
 def testAPIConnection(url, key):
     """Attempts to connect to the Burp API with a URL that includes the API key."""
     try:
-        resp = requests.get(url + key, verify=False)
-        print(resp)
-        print(resp.status_code)
-        print(type(resp.status_code))
+        resp = requests.get(url + "/" + key, verify=False)
         if resp.status_code == 200:
-            return 1
+            return True
         else:
             print('Invalid API URL or Key. Server Response: {}'.format(resp.status_code))
             return 2
     except Exception as e:
         print(e)
         print("exception")
-    print("final return")
     return 3
 
 def startBurpScan(url, key, target, scope, creds):
@@ -26,9 +24,9 @@ def startBurpScan(url, key, target, scope, creds):
     out of the scope of the url being scanned.
     """
     # Tests connection to the API. Exits the function if unsuccessful.
-    if not burp2.testAPIConnection(url, key):
+    if not testAPIConnection(url, key):
         return False
-    api_scan_url = url + key + '/scan'
+    api_scan_url = url + "/" + key + '/v0.1/scan/'
 
     # Automatically sets the scope to the URL. This prevents the scanner
     # to scan out of the scope of the URL you are providing.
@@ -52,10 +50,10 @@ def startBurpScan(url, key, target, scope, creds):
         return False
 
 def checkBurpScan(url, key, scanID):
-    if not burp2.testAPIConnection(url, key):
+    if not testAPIConnection(url, key):
         print("api returned false")
         #return False
-    api_scan_url = url + key + '/v0.1/scan/' + scanID
+    api_scan_url = url + "/" + key + '/v0.1/scan/' + scanID
     resp = requests.get(api_scan_url)
     print(resp)
     print(resp.status_code)
@@ -65,10 +63,10 @@ def checkBurpScan(url, key, scanID):
     return resp.json()
 
 def issueDefinitions(url, key):
-    if not burp2.testAPIConnection(url, key):
+    if not testAPIConnection(url, key):
         print("api returned false")
         return False
-    api_scan_url = url + key + "/v0.1/knowledge_base/issue_definitions"
+    api_scan_url = url + "/" + key + "/v0.1/knowledge_base/issue_definitions"
     resp = requests.get(api_scan_url)
     print(resp)
     print(resp.status_code)
