@@ -56,11 +56,8 @@ def checkBurpScan(url, key, scanID):
         #return False
     api_scan_url = url + "/" + key + '/v0.1/scan/' + scanID
     resp = requests.get(api_scan_url)
-    print(resp)
-    print(resp.status_code)
     if resp.status_code is not 200:
         return False
-    print(resp.json())
     return resp.json()
 
 def issueDefinitions(url, key):
@@ -69,11 +66,8 @@ def issueDefinitions(url, key):
         return False
     api_scan_url = url + "/" + key + "/v0.1/knowledge_base/issue_definitions"
     resp = requests.get(api_scan_url)
-    print(resp)
-    print(resp.status_code)
     if resp.status_code is not 200:
         return False
-    print(resp.json())
     return resp.json()
 
 def defineIssues(scanIssues, definitions):
@@ -84,7 +78,6 @@ def defineIssues(scanIssues, definitions):
         ret = issue
         number = str(issue["issue"]["type_index"])
         if number in definitions.keys():
-            print("found")
             if "description" in definitions[number].keys():
                 ret["issue"]["issue_description"] = definitions[number]["description"]
             if "remediation" in definitions[number].keys():
