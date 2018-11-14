@@ -36,9 +36,10 @@ def startBurpScan(url, key, target, scope, creds):
         "application_logins": []
     }
     for item in scope:
-        data["scope"]["include"] += {"rule": item, "type": "SimpleScopeDef"}
-    for cred in creds:
-        data["application_logins"] += {"password": cred[1], "username": cred[0]}
+        data["scope"]["include"].append({"rule": item, "type": "SimpleScopeDef"})
+    if creds:
+        for cred in creds:
+            data["application_logins"].append({"password": cred[1], "username": cred[0]})
     try:
         resp = requests.post(api_scan_url, json=data)
     except Exception as e:
