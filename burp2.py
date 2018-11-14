@@ -72,7 +72,7 @@ def issueDefinitions(url, key):
 
 def defineIssues(scanIssues, definitions):
     retIssues = []
-    definitions = dict([(D["issue_type_id"], burp2.pop(D, "issue_type_id")) for D in definitions])
+    definitions = dict([(D["issue_type_id"], pop(D, "issue_type_id")) for D in definitions])
     # Definitions is now a dict of issue_type_id: issue_data.
     for issue in scanIssues["issue_events"]:
         ret = issue
@@ -89,6 +89,7 @@ def defineIssues(scanIssues, definitions):
         else:
             print("not found " + number)
             continue
+        retIssues.append(ret)
     return retIssues
 
 def pop(x, k):
@@ -98,8 +99,8 @@ def pop(x, k):
     return x
 
 def getIssues(url, key, scanID):
-    scanIssues = burp2.checkBurpScan(url, key, scanID)
-    definitions = burp2.issueDefinitions(url, key)
+    scanIssues = checkBurpScan(url, key, scanID)
+    definitions = issueDefinitions(url, key)
     issues = defineIssues(scanIssues, definitions)
     return issues
 
