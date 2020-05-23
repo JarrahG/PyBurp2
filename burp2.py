@@ -56,7 +56,7 @@ def checkBurpScan(url, key, scanID):
         return False
     api_scan_url = url + "/" + key + '/v0.1/scan/' + scanID
     resp = requests.get(api_scan_url)
-    if resp.status_code is not 200:
+    if resp.status_code != 200:
         return False
     return resp.json()
 
@@ -66,7 +66,7 @@ def issueDefinitions(url, key):
         return False
     api_scan_url = url + "/" + key + "/v0.1/knowledge_base/issue_definitions"
     resp = requests.get(api_scan_url)
-    if resp.status_code is not 200:
+    if resp.status_code != 200:
         return False
     return resp.json()
 
