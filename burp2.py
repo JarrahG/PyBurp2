@@ -1,8 +1,8 @@
 #!/usr/bin/python3
+import time
 import copy
-import json
 import requests
-from pprint import pprint
+
 
 def testAPIConnection(url, key):
     """Attempts to connect to the Burp API with a URL that includes the API key."""
@@ -11,12 +11,13 @@ def testAPIConnection(url, key):
         if resp.status_code == 200:
             return True
         else:
-            print('Invalid API URL or Key. Server Response: {}'.format(resp.status_code))
+            print("Invalid API URL or Key. Server Response: {}".format(resp.status_code))
             return 2
     except Exception as e:
         print(e)
         print("exception")
     return 3
+
 
 def startBurpScan(url, key, target, scope, creds):
     """Initiates request to the Burp API to start a scan for a specified
@@ -26,49 +27,75 @@ def startBurpScan(url, key, target, scope, creds):
     # Tests connection to the API. Exits the function if unsuccessful.
     if not testAPIConnection(url, key):
         return False
-    api_scan_url = url + "/" + key + '/v0.1/scan/'
+    api_scan_url = url + "/" + key + "/v0.1/scan/"
 
     # Automatically sets the scope to the URL. This prevents the scanner
     # to scan out of the scope of the URL you are providing.
-    data = {
-        "scope": {"include": [] },
-        "urls": [target],
-        "application_logins": []
-    }
+    data = {"scope": {"include": []}, "urls": [target], "application_logins": []}
     for item in scope:
         data["scope"]["include"].append({"rule": item, "type": "SimpleScopeDef"})
     if creds:
         for cred in creds:
             data["application_logins"].append({"password": cred[1], "username": cred[0]})
-    try:
-        resp = requests.post(api_scan_url, json=data)
-    except Exception as e:
-        return False
+    retryCount = 0
+    while True:
+        try:
+            resp = requests.post(api_scan_url, json=data)
+        except requests.exceptions.ConnectionError:
+            retryCount += 1
+            if retryCount <= 10:
+                time.sleep(retryCount + 1)
+                continue
+            return False
+        break
     if resp.status_code == 201:
-        scan_id = resp.headers.get('location')
+        scan_id = resp.headers.get("location")
         return scan_id
     else:
         return False
+
 
 def checkBurpScan(url, key, scanID):
     if not testAPIConnection(url, key):
         print("api returned false")
         return False
-    api_scan_url = url + "/" + key + '/v0.1/scan/' + scanID
-    resp = requests.get(api_scan_url)
+    api_scan_url = url + "/" + key + "/v0.1/scan/" + scanID
+    retryCount = 0
+    while True:
+        try:
+            resp = requests.get(api_scan_url)
+        except requests.exceptions.ConnectionError:
+            retryCount += 1
+            if retryCount <= 10:
+                time.sleep(retryCount + 1)
+                continue
+            return False
+        break
     if resp.status_code != 200:
         return False
     return resp.json()
+
 
 def issueDefinitions(url, key):
     if not testAPIConnection(url, key):
         print("api returned false")
         return False
     api_scan_url = url + "/" + key + "/v0.1/knowledge_base/issue_definitions"
-    resp = requests.get(api_scan_url)
+    retryCount = 0
+    while True:
+        try:
+            resp = requests.get(api_scan_url)
+        except requests.exceptions.ConnectionError:
+            retryCount += 1
+            if retryCount <= 10:
+                time.sleep(retryCount + 1)
+                continue
+            return False
+        break
     if resp.status_code != 200:
         return False
     return resp.json()
+
 
 def defineIssues(scanIssues, definitions):
     retIssues = []
@@ -83,7 +110,9 @@ def defineIssues(scanIssues, definitions):
             if "remediation" in definitions[number].keys():
                 ret["issue"]["issue_remediation"] = definitions[number]["remediation"]
             if "vulnerability_classifications" in definitions[number].keys():
-                ret["issue"]["issue_vulnerability_classifications"] = definitions[number]["vulnerability_classifications"]
+                ret["issue"]["issue_vulnerability_classifications"] = definitions[number][
+                    "vulnerability_classifications"
+                ]
             if "references" in definitions[number].keys():
                 ret["issue"]["issue_references"] = definitions[number]["references"]
         else:
@@ -92,15 +121,16 @@ def defineIssues(scanIssues, definitions):
         retIssues.append(ret)
     return retIssues
 
+
 def pop(x, k):
     """Returns copy of dict `x` without key `k`."""
     x = copy.copy(x)
     del x[k]
     return x
 
+
 def getIssues(url, key, scanID):
     scanIssues = checkBurpScan(url, key, scanID)
     definitions = issueDefinitions(url, key)
     issues = defineIssues(scanIssues, definitions)
     return issues
-
